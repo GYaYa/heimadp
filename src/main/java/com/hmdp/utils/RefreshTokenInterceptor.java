@@ -3,7 +3,9 @@ package com.hmdp.utils;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.hmdp.dto.UserDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.HttpServletRequest;
@@ -14,8 +16,14 @@ import java.util.concurrent.TimeUnit;
 import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
 import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
 
+//1.加上@Component注解，将LoginInterceptor类作为组件，交由spring管理，自动注入stringRedisTemplate
+//在mvcconfig中，通过@Autowired注入LoginInterceptor对象即可
+//2.如果不加@Component，只能在RefreshTokenInterceptor类中构造方法中注入stringRedisTemplate，
+//而不加@Component，在mvcconfig中是通过new RefreshTokenInterceptor()创建对象
+@Component
 public class RefreshTokenInterceptor implements HandlerInterceptor {
 
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     public RefreshTokenInterceptor(StringRedisTemplate stringRedisTemplate) {
