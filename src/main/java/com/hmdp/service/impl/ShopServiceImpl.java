@@ -1,5 +1,6 @@
 package com.hmdp.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Shop;
@@ -35,17 +36,26 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         String key=CACHE_SHOP_KEY+id;
         //1.根据id从redis查询商铺信息
         String shopJson = stringRedisTemplate.opsForValue().get(key);
-        //2.存在则返回商铺信息
-        if (shopJson!=null){
-            return Result.ok(shopJson);
+        //2.判断redis是否存在商铺信息
+        if (StrUtil.isNotBlank(shopJson)) {//判断字符串既不为null，也不是空字符串(""),且也不是空白字符
+            //3.存在，返回商铺信息
+            Shop shop = JSONUtil.toBean(shopJson, Shop.class);
+            return Result.ok(shop);
         }
-        //3.不存在，则查询数据库
-        Shop shop = getById(id);
-        //4.不存在，返回失败结果
-        if (shop==null){
+        //判断是否为空值
+        if (shopJson!=null) {
+            //缓存了空值，返回店铺不存在
             return Result.fail("店铺不存在");
         }
-        //5.存在，把商铺信息写入redis，并返回商铺信息
+        //4.缓存没有存任何东西，根据id查询数据库
+        Shop shop = getById(id);
+        //5.数据库中不存在，返回失败结果
+        if (shop==null){
+            //店铺不存在,把空值写入redis
+            stringRedisTemplate.opsForValue().set(key, "", RedisConstants.CACHE_NULL_TTL, TimeUnit.MINUTES);
+            return Result.fail("店铺不存在");
+        }
+        //6.数据库中存在，把商铺信息写入redis，并返回商铺信息
         stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(shop), RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
         return Result.ok(shop);
     }
