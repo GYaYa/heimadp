@@ -9,6 +9,7 @@ import com.hmdp.entity.Shop;
 import com.hmdp.mapper.ShopMapper;
 import com.hmdp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hmdp.utils.CacheClient;
 import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.RedisData;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
-import static com.hmdp.utils.RedisConstants.LOCK_SHOP_KEY;
+import static com.hmdp.utils.RedisConstants.*;
 import static org.apache.tomcat.jni.Global.unlock;
 
 /**
@@ -38,6 +38,9 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
+    @Autowired
+    private CacheClient cacheClient;
+
     //根据id查询商铺信息
     @Override
     public Result queryById(Long id) {
@@ -48,14 +51,25 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //Shop shop = queryWithMutex(id);
 
         //解决缓存击穿-逻辑过期
-        Shop shop = queryWithLogicExpire(id);
+        //Shop shop = queryWithLogicExpire(id);
 
+        //封装工具类后调用
+        Shop shop = cacheClient.
+                queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+        if(shop==null){
+
+            return Result.fail("店铺不存在！");
+        }
         return Result.ok(shop);
     }
 
     //线程池
     private final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
+
+
+
+    /**
     //解决缓存击穿-逻辑过期
     //逻辑过期：提前将热key存入缓存，设置逻辑过期时间，当缓存中的数据过期了，返回空值，开启另一线程再从数据库中查询数据，更新缓存
     //热key场景，不需要判断缓存是否为空值
@@ -100,6 +114,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //6.4无论是否成功，都返回旧的商铺信息
         return shop;
     }
+     **/
 
 
 
