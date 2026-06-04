@@ -1,11 +1,5 @@
 package com.hmdp.utils;
 
-import cn.hutool.core.bean.BeanUtil;
-import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

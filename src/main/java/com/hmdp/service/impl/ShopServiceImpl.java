@@ -41,30 +41,36 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Autowired
     private CacheClient cacheClient;
 
+    //线程池
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+
+
+
+
     //根据id查询商铺信息
     @Override
     public Result queryById(Long id) {
-        //解决缓存穿透
+
+        //1.解决缓存穿透
         //Shop shop = queryWithPassThrough(id);
+        //优化之后-调用工具类
+        Shop shop = cacheClient.queryWithPassThrough(RedisConstants.CACHE_SHOP_KEY,id,Shop.class,id2 ->getById(id2),RedisConstants.CACHE_SHOP_TTL,TimeUnit.MINUTES);
 
-        //解决缓存击穿-互斥锁
-        //Shop shop = queryWithMutex(id);
+        //2.解决缓存击穿-互斥锁
+        //Shop shop = cacheClient.queryWithMutex(id);
+        //优化之后-调用工具类
+        //Shop shop = cacheClient.querywithMutex(RedisConstants.CACHE_SHOP_KEY,id,Shop.class,id2 ->getById(id2),RedisConstants.CACHE_SHOP_TTL,TimeUnit.MINUTES);
 
-        //解决缓存击穿-逻辑过期
+        //3.解决缓存击穿-逻辑过期
         //Shop shop = queryWithLogicExpire(id);
-
         //封装工具类后调用
-        Shop shop = cacheClient.
-                queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
-        if(shop==null){
+        //Shop shop = cacheClient.queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
 
+        if(shop==null){
             return Result.fail("店铺不存在！");
         }
         return Result.ok(shop);
     }
-
-    //线程池
-    private final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
 
 
@@ -240,6 +246,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
      **/
 
+    /**
     //获取互斥锁
     private boolean tryLock(String lockKey){
         Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "1", RedisConstants.LOCK_SHOP_TTL, TimeUnit.MINUTES);
@@ -251,6 +258,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private void unLock(String lockKey){
         stringRedisTemplate.delete(lockKey);
     }
+     **/
 
 
     //保存店铺数据到Redis
